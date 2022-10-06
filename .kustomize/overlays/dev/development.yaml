@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8sDemoApp
+  namespace: k8sDemoApp
+  labels:
+    env: dev
+spec:
+  selector:
+    matchLabels:
+      app: k8sDemoApp
+  template:
+    metadata:
+      labels:
+        app: k8sDemoApp
