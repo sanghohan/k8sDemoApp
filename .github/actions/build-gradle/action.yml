@@ -1,0 +1,17 @@
+name: Build Gradle BootJar
+description: Build Gradle BootJar
+runs:
+  using: "composite"
+  steps:
+  - name: Setup Java
+    uses: actions/setup-java@v2
+    with:
+      java-version: '17'
+      distribution: 'zulu'
+
+  - name: Validate Gradle wrapper
+    uses: gradle/wrapper-validation-action@v1
+
+  - name: Run the Gradle package task
+    run: ./gradlew clean bootjar -x test
+    shell: bash

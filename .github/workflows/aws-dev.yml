@@ -1,0 +1,63 @@
+name: Deploy Invoke (DEV)
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Dummy Tags'
+        type: string
+        default: 'manually-deploy'
+        required: false
+
+jobs:
+  pre-job:
+    name: Prepare Job
+    runs-on: [self-hosted, dev, aws, tc]
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+    - id: skip_check
+      uses: fkirc/skip-duplicate-actions@master
+      with:
+        # ref. https://github.com/fkirc/skip-duplicate-actions/blob/master/action.yml
+        concurrent_skipping: 'always'
+        skip_after_successful_duplicate: 'true'
+        paths_ignore: '["**/README.md", "**/docs/**"]'
+        do_not_skip: '["workflow_dispatch", "schedule"]'
+
+  deploy-invoke:
+    name: Deploy Invoke (DEV)
+    needs: pre-job
+    runs-on: [self-hosted, dev, aws, tc]
+    if: ${{ needs.pre-job.outputs.should_skip != 'true' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Build Gradle
+      uses: ./.github/actions/build-gradle
+
+    - name: Push ECR
+      id: push-ecr
+      uses: ./.github/actions/push-ecr
+      with:
+        AWS_REGION: ap-northeast-2
+        ECR_REPOSITORY: dmp-dev-demo-ecr
+        ASSUME_ROLE_PROJECT: emart-d-dtmp
+
+    #- name: Deploy ECS
+    #  uses: ./.github/actions/deploy-ecs
+    #  with:
+    #    ECR_IMAGE: ${{ steps.push-ecr.outputs.image }}
+    #    ECS_TASK_DEFINITION: dmp-dev-trk-key-mng-taskdef
+    #    ECS_TASK_DEFINITION_FILE: .aws/dev-task-definition.json
+    #    ECS_CLUSTER: dmp-dev-trk-base-ecsc
+    #    ECS_SERVICE: dmp-dev-trk-key-mng-ecss
+    #    ECS_CONTAINER_NAME: app
+    #    CODEDEPLOY_APPSPEC_FILE: .aws/appspec.json
+    #    CODEDEPLOY_APPLICATION: dmp-dev-trk-key-mng-cd
+    #    CODEDEPLOY_DEPLOYMENT_GROUP: dmp-dev-trk-key-mng-cddg
+

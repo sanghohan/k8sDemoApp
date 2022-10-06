@@ -1,0 +1,61 @@
+name: Deploy to Amazon ECS
+description: Deploy to Amazon ECS
+inputs:
+  ECR_IMAGE:
+    required: true
+    description: set this to your Amazon ECR repository image name
+  ECS_TASK_DEFINITION:
+    required: true
+    description: set this to the your ECS Task Definition Family name
+  ECS_TASK_DEFINITION_FILE:
+    required: true
+    description: set this to the path to your Amazon ECS task definition file, e.g. .aws/task-definition.json
+  ECS_CLUSTER:
+    required: true
+    description: set this to your Amazon ECS cluster name
+  ECS_SERVICE:
+    required: true
+    description: set this to your Amazon ECS service name
+  ECS_CONTAINER_NAME:
+    required: true
+    description: set this to the name of the container in the containerDefinitions section of your task definition
+  CODEDEPLOY_APPSPEC_FILE:
+    required: true
+    description: set code deploy appspec file for blue/green deploy
+  CODEDEPLOY_APPLICATION:
+    required: true
+    description: set code deploy applicaton for blue/green deploy
+  CODEDEPLOY_DEPLOYMENT_GROUP:
+    required: true
+    description: set code deploy deployment group for blue/green deploy
+
+runs:
+  using: "composite"
+  steps:
+  - name: Get next revision
+    id: get-next-revision
+    run: |
+      current_revision=$(aws ecs describe-task-definition --task-definition ${{ inputs.ECS_TASK_DEFINITION }} --query taskDefinition.revision)
+      echo "::set-output name=revision::$(( $current_revision + 1 ))"
+    shell: bash
+
+  - name: Fill in the new image ID in the Amazon ECS task definition
+    id: task-def
+    uses: aws-actions/amazon-ecs-render-task-definition@v1
+    with:
+      task-definition: ${{ inputs.ECS_TASK_DEFINITION_FILE }}
+      container-name: ${{ inputs.ECS_CONTAINER_NAME }}
+      image: ${{ inputs.ECR_IMAGE }}
+      environment-variables: "DD_VERSION=${{ steps.get-next-revision.outputs.revision }}"
+
+  - name: Deploy Amazon ECS task definition
+    uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+    with:
+      task-definition: ${{ steps.task-def.outputs.task-definition }}
+      service: ${{ inputs.ECS_SERVICE }}
+      cluster: ${{ inputs.ECS_CLUSTER }}
+      wait-for-service-stability: true
+      codedeploy-appspec: ${{ inputs.CODEDEPLOY_APPSPEC_FILE }}
+      codedeploy-application: ${{ inputs.CODEDEPLOY_APPLICATION }}
+      codedeploy-deployment-group: ${{ inputs.CODEDEPLOY_DEPLOYMENT_GROUP }}
+
