@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: k8sDemoApp
-  namespace: k8sDemoApp
+  namespace: k8s-demo-app
   labels:
     env: dev
 spec:
