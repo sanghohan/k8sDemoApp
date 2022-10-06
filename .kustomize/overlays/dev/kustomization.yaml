@@ -5,7 +5,7 @@ images:
     newName: ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/demo-frontend
     newTag: abcdefg
 resources:
-  - ../base
+  - ../../base
 patchesStrategicMerge:
   - deployment.yaml
   - service.yaml
